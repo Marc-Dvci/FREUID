@@ -101,8 +101,20 @@ def main(args):
         print(f"  {os.path.basename(ck)}: mean={probs.mean():.4f} std={probs.std():.4f}")
     
     ens = ensemble_predictions(per_model, method=args.method)
+
+    if args.normalize_per_template:
+        # Rank within each document template, so every template contributes the same score
+        # distribution to the single global operating point the FREUID score is read at.
+        from template_norm import cluster_templates, normalize_per_template
+        path_by_id = dict(zip(test_df["id"].astype(str), test_df["abs_path"]))
+        paths = [path_by_id[i] for i in ids_ref]
+        clusters, k = cluster_templates(paths)
+        sizes = np.bincount(clusters)
+        print(f"per-template normalization: k={k} (silhouette), cluster sizes={sorted(sizes, reverse=True)}")
+        ens = normalize_per_template(ens, clusters, alpha=args.template_alpha)
+
     pred_map = dict(zip(ids_ref, ens))
-    
+
     # Align to sample_submission
     sub = pd.read_csv(os.path.join(args.data_dir, "sample_submission.csv"))
     score_col = [c for c in sub.columns if c != "id"][0]
@@ -125,4 +137,8 @@ if __name__ == "__main__":
     p.add_argument("--workers", type=int, default=6)
     p.add_argument("--fill", type=float, default=0.5)
     p.add_argument("--tta", action="store_true")
+    p.add_argument("--normalize_per_template", action="store_true",
+                   help="rank scores within each discovered document template before pooling")
+    p.add_argument("--template_alpha", type=float, default=1.0,
+                   help="1.0 = pure within-template rank; 0.0 = global rank only")
     main(p.parse_args())

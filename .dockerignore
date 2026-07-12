@@ -1,0 +1,20 @@
+.git
+.agents
+.codex
+.venv
+_local_out
+_smoke
+external_data
+the-freuid-challenge-2026-ijcai-ecai
+Documents for submission
+logs
+submissions
+*.csv
+*.jpg
+*.jpeg
+*.png
+*.pdf
+checkpoints/*
+!checkpoints/cnxb384_full.pth
+!checkpoints/dinov2b_full.pth
+!checkpoints/fnoise_full.pth

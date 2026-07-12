@@ -25,15 +25,25 @@ from augment_recapture import RecaptureSimulator
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
+# Longest-side size the image is brought to right after decode, before any recapture simulation.
+PRE_RESIZE = 512
+
 
 class FREUIDDataset(Dataset):
     def __init__(self, df, transform, recapture=None, p_recapture=0.0,
-                 path_col="abs_path", label_col="label", return_id=False, is_test=False):
+                 path_col="abs_path", label_col="label", return_id=False, is_test=False,
+                 pre_resize=PRE_RESIZE):
         """
         df          : DataFrame with `path_col` (absolute image path) and (unless is_test) `label_col`.
         transform   : albumentations transform producing a CHW float tensor.
         recapture   : RecaptureSimulator instance (or None).
         p_recapture : probability of applying the recapture simulator to a sample.
+        pre_resize  : longest-side resize applied straight after decode, BEFORE the recapture
+                      simulator. The source images are 1000x1584; running the simulator at that
+                      size costs ~209 ms/image and starves the GPU, versus ~29 ms at 512 -- and the
+                      model only ever sees 384 px, so the extra detail is discarded anyway. Applied
+                      identically in train, eval and test so the resampling chain never differs
+                      between fitting and inference.
         """
         self.df = df.reset_index(drop=True)
         self.transform = transform
@@ -43,6 +53,7 @@ class FREUIDDataset(Dataset):
         self.label_col = label_col
         self.return_id = return_id
         self.is_test = is_test
+        self.pre_resize = pre_resize
 
     def __len__(self):
         return len(self.df)
@@ -56,9 +67,18 @@ class FREUIDDataset(Dataset):
             return img
         return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+    def _pre_resize(self, image):
+        h, w = image.shape[:2]
+        longest = max(h, w)
+        if not self.pre_resize or longest <= self.pre_resize:
+            return image
+        s = self.pre_resize / longest
+        return cv2.resize(image, (max(1, int(round(w * s))), max(1, int(round(h * s)))),
+                          interpolation=cv2.INTER_AREA)
+
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        image = self._read(row[self.path_col])
+        image = self._pre_resize(self._read(row[self.path_col]))
 
         if self.recapture is not None and self.p_recapture > 0:
             # Uses the worker-level numpy RNG so train.py/train_fast.py can seed workers.

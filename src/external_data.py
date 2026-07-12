@@ -41,9 +41,9 @@ REGISTRY = {
         relevance="forged ID/travel docs derived from MIDV-2020; common user-level forgeries",
         note="reals = MIDV2020 originals, fakes = altered versions."),
     "MIDV-Holo": dict(
-        url="ftp://smartengines.com / project page",
-        paper="MIDV-Holo (hologram ID auth)",
-        license="research/non-commercial (verify)",
+        url="ftp://smartengines.com/midv-holo",
+        paper="MIDV-Holo, ICDAR 2023, DOI:10.1007/978-3-031-41682-8_30",
+        license="CC BY-SA 2.5 (bundled license.txt); Generated Photos attribution requested",
         relevance="screen-recapture, printed-photo, drawn-hologram, portrait-replacement attacks; "
                   "glare/recapture baselines -> directly targets the print-and-capture gap",
         note="video frames; sample frames per clip."),

@@ -192,9 +192,17 @@ def main(args):
     
     generator = torch.Generator()
     generator.manual_seed(args.seed)
-    dl = lambda ds, sh, bs=args.batch_size: DataLoader(
-        ds, batch_size=bs, shuffle=sh, num_workers=args.workers, pin_memory=True, drop_last=sh,
-        persistent_workers=args.workers > 0, worker_init_fn=seed_worker, generator=generator)
+    def dl(ds, sh, bs=args.batch_size):
+        # Keep workers persistent only for the large training loader.  On Windows each worker
+        # imports the full CUDA-enabled PyTorch runtime; retaining workers for all five loaders
+        # can consume tens of gigabytes of committed memory and fail at the final stress loader
+        # with WinError 1455.  Evaluation is a small fraction of the epoch, so zero workers is
+        # the safest default and has negligible end-to-end cost.
+        workers = args.workers if sh else args.eval_workers
+        return DataLoader(
+            ds, batch_size=bs, shuffle=sh, num_workers=workers, pin_memory=True, drop_last=sh,
+            persistent_workers=sh and workers > 0, worker_init_fn=seed_worker,
+            generator=generator)
     train_loader = dl(train_ds, True)
     val_clean_loader = dl(val_clean, False)
     val_recap_loader = dl(val_recap, False)
@@ -344,6 +352,8 @@ if __name__ == "__main__":
     p.add_argument("--recapture_strength", default="medium", choices=["light", "medium", "heavy"])
     p.add_argument("--val_frac", type=float, default=0.05, help="random val fraction for monitoring")
     p.add_argument("--workers", type=int, default=6)
+    p.add_argument("--eval_workers", type=int, default=0,
+                   help="evaluation workers; 0 avoids Windows paging-file exhaustion")
     p.add_argument("--extra_csv", default=None, help="external data CSV (abs_path,label)")
     p.add_argument("--ood_csv", default=None, help="labeled OOD probe CSV (abs_path,label), used for checkpoint selection")
     p.add_argument("--ood_max", type=int, default=0, help="optional row cap for OOD probe eval; 0 = all rows")

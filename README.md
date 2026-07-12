@@ -6,8 +6,7 @@ Licensed under the MIT License (see `LICENSE`).
 
 ## Method
 
-An ensemble of three complementary single-logit detectors, rank-averaged, followed by a
-**per-template score normalization** step at inference.
+An ensemble of three complementary single-logit detectors, rank-averaged.
 
 | Member | Backbone | Input | Role |
 |---|---|---|---|
@@ -23,26 +22,39 @@ hole (down/up resample + double JPEG + blur, plus moiré, halftone, glare, vigne
 colour cast, sensor noise). It is applied to **both classes**, so "looks recaptured" cannot become a
 fraud shortcut.
 
-**Per-template score normalization.** The FREUID score pools every document type into a single
-global threshold, and APCER@1%BPCER is measured at a strict 1% BPCER operating point. Raw model
-scores drift in scale from one document template to another, which alone is enough to wreck that
-operating point: false alarms on one template push the global threshold up and hide attacks on
-another. At inference we cluster the test images by template and rank-normalize scores *within*
-each cluster before pooling. This is transductive over the test set only and uses no labels.
+**The operating point is what the metric is really about.** APCER is read at the threshold where
+just 1% of bona-fides are rejected, so a heavy bona-fide false-positive tail is fatal: a handful of
+genuine documents scored near 1.0 push that threshold to ~0.99, and every attack scoring below it
+counts as missed. A single ConvNeXt baseline scores AuDET ≈ 0 yet APCER@1%BPCER ≈ 0.5 for exactly
+this reason. Rank-averaging diverse members is the direct remedy — a false positive from one member
+is demoted by the others — which is why the ensemble is the method rather than a nicety.
+
+*Negative result, recorded so it isn't retried:* we tested **per-template score normalization**
+(cluster the test set by document template, rank scores within each cluster, pool). The FREUID score
+is purely rank-based, and per-template score-scale drift is real and measurable, so this looked
+compelling. It is worse: public leaderboard 0.338 → 0.541. Rank-mapping cannot demote a confidently
+mis-scored bona-fide out of the top of its own cluster, and equalizing templates implicitly assumes
+equal fraud prevalence across them, which does not hold. The code remains in `src/template_norm.py`
+behind `--normalize_per_template` (off by default).
 
 ## Data
 
 * **FREUID train set** (competition, 69,352 images, 5 document types). Not redistributed here.
-* **External data** — public, license-compatible, cited. The registry lives in
+* **External data** — 15,179 MIDV-Holo frames under CC BY-SA 2.5, cited in the report. The registry lives in
   `src/external_data.py` (`python src/external_data.py --print_registry`); every source used in the
   final model is listed with its URL and license in the technical report.
 
-Validation never uses external data. Model selection uses a held-out FREUID document type plus a
-recapture-augmented split; see `src/cv.py`.
+The MIDV-Holo training and probe partitions share no image, video clip, or document identity, and
+use disjoint attack families. Checkpoint selection uses the 6-document/2-unseen-attack probe with
+forced-recapture FREUID validation as a tie-break. The 20 official real-recapture rows are excluded
+from fitting and reported only as a small stress slice.
 
 ## Reproducing
 
 ```bash
+git lfs install
+git lfs pull
+
 pip install -r requirements.txt
 
 # train the ensemble (single RTX 4070, ~6 h)
@@ -51,7 +63,7 @@ python run_all.py
 # inference -> submission.csv
 python src/infer_ensemble.py \
   --ckpts checkpoints/cnxb384_full.pth checkpoints/dinov2b_full.pth checkpoints/fnoise_full.pth \
-  --tta --method rank --normalize_per_template --out submission.csv
+  --tta --method rank --out submission.csv
 ```
 
 ## Docker (organizer no-network sandbox)
@@ -59,7 +71,7 @@ python src/infer_ensemble.py \
 ```bash
 docker build -t freuid-repro:local .
 
-docker run --rm --network none \
+docker run --rm --gpus all --network none \
   -v /path/to/flat/test/images:/data:ro \
   -v "$(pwd)/out:/submissions" \
   freuid-repro:local
@@ -68,6 +80,10 @@ docker run --rm --network none \
 Model weights are baked into the image; nothing is downloaded at runtime. The container reads a flat
 directory of images from `/data` (row id = filename stem) and writes `/submissions/submission.csv`
 with columns `id,label`, where `label` is a fraud score (higher = more likely fraudulent).
+
+For the final Kaggle CSV, run the container on the private images alone and merge its output by id
+with the frozen public-row CSV using `python scripts/assemble_final_submission.py`. This preserves
+exact equality between organizer-side private-only reproduction and the selected Kaggle private rows.
 
 ## Hardware
 

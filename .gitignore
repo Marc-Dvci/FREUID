@@ -6,6 +6,11 @@ _smoke/
 # model weights (shipped via release / Docker, not git)
 checkpoints/
 *.pth
+!checkpoints/
+checkpoints/*
+!checkpoints/cnxb384_full.pth
+!checkpoints/dinov2b_full.pth
+!checkpoints/fnoise_full.pth
 
 # environment
 .venv/
@@ -21,3 +26,14 @@ midv_holo_val.csv
 midv_holo_val_clean.csv
 tmp_labeled.csv
 test_imports.py
+_pub_clusters.csv
+*.bak
+_local_out/
+_docker_smoke*/
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.toc

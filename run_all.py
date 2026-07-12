@@ -39,10 +39,12 @@ MODELS = [
         "backbone": "vit_base_patch14_reg4_dinov2.lvd142m",
         "img_size": "392",
         "epochs": "3",
-        "batch_size": "10",
-        "accum": "3",
+        # Fits in 6.1 GB without gradient checkpointing -> 30% faster than gc=ON at bs=10.
+        # (ConvNeXt-V2-B keeps gc=ON: without it, it needs 12.3 GB and thrashes the 12 GB card.)
+        "batch_size": "16",
+        "accum": "2",
         "lr": "1e-4",
-        "extra_flags": ["--grad_ckpt", "--p_recapture", "0.35"],
+        "extra_flags": ["--p_recapture", "0.35"],
     },
     {
         "tag": "fnoise_full",
@@ -70,7 +72,7 @@ def run_model(cfg, force=False):
            "--batch_size", cfg["batch_size"],
            "--accum", cfg["accum"],
            "--lr", cfg["lr"],
-           "--workers", "4",
+           "--workers", "8",
            ] + COMMON + cfg["extra_flags"]
     print(f"\n{'='*60}")
     print(f"STARTING: {cfg['tag']} ({cfg['backbone']})")
