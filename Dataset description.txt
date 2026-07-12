@@ -1,0 +1,53 @@
+Dataset Description
+The FREUID dataset is a proprietary collection of high-fidelity bona-fide and fraudulent identity document samples contributed by the Microblink Fraud Lab. It is designed to benchmark fraud detection systems under a more realistic threat model than purely digital manipulation datasets.
+
+Currently, only a sample of the training dataset has been released to allow competitors to begin exploring and defining their solutions. The full dataset, including the public training and testing sets, is expected to be released at the beginning of June.
+
+Each sample represents an identity document image. The task is binary fraud detection:
+
+0 - bona-fide / genuine document
+1 - attack / fraudulent document
+Fraudulent examples are designed to cover a broad attack surface, including:
+
+Physical manipulations on printed and captured document substrates;
+GenAI-driven multimodal edits created with accessible text-and-image tools;
+Print-and-capture forgeries that suppress many fragile digital artifacts and close the "analog hole";
+combinations of physical, digital and recapture effects that require models to detect semantic, structural and physical inconsistencies rather than only pixel-level signatures.
+The dataset deliberately includes under-represented document types, scripts, layouts and languages to test cross-document generalization. Strong solutions should perform well across document domains rather than overfit to a small number of template-specific or generator-specific traces.
+
+Files
+The competition data will contain labeled training examples and unlabeled test examples.
+
+train/ - training document images.
+test/ - test document images for which participants submit predictions.
+train.csv - metadata for the training set, including the row id, image path, binary label, information if example is fully digital or recaptured and type of document.
+test.csv - metadata for the test set, including the row id and image path.
+sample_submission.csv - the required submission format.
+The row id column is the stable key used by Kaggle to align submissions with hidden labels during scoring.
+
+Labels
+The column label indicates whether a document is bona-fide (value 0) or fraudulent (value 1) while is_digital column indicates if example is fully digital (value 1) or re-captured (printed + captured, value 0). Column type indicates type of document (in a format <country>/<document-type>):
+
+id,image_path,label,is_digital,type
+000001,train/000001.jpg,0,0,USA/DL
+000002,train/000002.jpg,1,0,SWITZERLAND/ID
+000003,train/000003.jpg,1,1,CROATIA/ID
+Participants should treat label=1 as the positive class: an attack or fraudulent document.
+
+Submission Format
+For every row in test.csv, submit one numeric fraud score. Higher values should indicate higher confidence that the document is fraudulent.
+
+id,score
+000001,0.0123
+000002,0.8741
+000003,0.4310
+Scores need to be calibrated probabilities within the range [0, 1]. The leaderboard metric uses the ranking and operating-point behavior of these scores through the FREUID Score, which combines AuDET with APCER at 1% BPCER.
+
+Public and Private Leaderboards
+The public leaderboard is computed on a public validation subset of the hidden test labels so teams can iterate during the competition. The final ranking is computed on a held-out subset that is intended to measure true generalization.
+
+External Data
+Publicly available external data and pre-trained models are allowed, provided their licenses permit use in this competition and all sources are cited in the team's report. Proprietary external data that is not freely accessible to other participants is not allowed.
+
+Access and Use
+Dataset access is restricted to the competition terms. The FREUID dataset is licensed for non-commercial research use only. Participants may not redistribute the dataset outside the competition or use it for commercial purposes without separate permission from the organizers.

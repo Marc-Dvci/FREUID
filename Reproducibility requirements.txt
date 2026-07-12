@@ -1,0 +1,144 @@
+Reproducibility package
+After the competition closes on July 15, 2026, we verify solutions before the final private leaderboard and prize announcement. This page is the public reference for requirements, templates, and the Docker sandbox contract.
+
+Prize eligibility - mandatory
+Teams that do not provide a complete reproducibility package will not be eligible for prizes or for invitation to the IJCAI-ECAI live showdown, regardless of private leaderboard rank. Partial, late, or non-reproducible submissions forfeit prize eligibility.
+
+Open-source code (OSI-approved license) at a frozen commit SHA
+Technical report (PDF)
+Runnable Docker artifact (no-network sandbox)
+Exactly one structured reply on the pinned Kaggle discussion thread
+Reply deadline: July 15, 2026, 23:59 AoE - same as the final Kaggle submission deadline. All times 23:59 AoE.
+
+Process overview
+Now
+Prepare your package
+
+Download templates below; test Docker with --network none.
+
+By July 13th, 2026
+Private test release + code freeze
+
+Private images released. Solution must already be in a public git repo; no model or training changes after this date. Details
+
+By July 15th, 2026
+Final Kaggle submission + reproducibility reply
+
+Final submission and one pinned-thread reply (use REPLY_TEMPLATE.txt) due by 23:59 AoE. Only update private rows after July 13 - model weights must stay frozen.
+
+July 15th-24th, 2026
+Organizer verification
+
+Preliminary results window; we verify containers against your Kaggle submission.
+
+July 24th, 2026
+Final winner announcement
+
+Top teams notified; live showdown invitation at IJCAI-ECAI 2026 (Aug 18th-21st).
+
+Full competition timeline: freuid2026.microblink.com.
+
+Code freeze after private test release
+Private test images are released on July 13th, 2026 (~2 days before the final deadline). Your solution must already be in a public git repository (OSI-approved license). No separate lock registration is required.
+
+After July 13th - inference only
+No changes to model weights, architecture, or training code
+You may run inference on private images and update private-row Kaggle predictions
+Documentation and Docker packaging updates are allowed if weights are unchanged
+Organizers verify compliance via git commit history after private release
+Downloads
+Optional starter kits. Using them is not required - only the sandbox contract is mandatory for prize eligibility.
+
+Docker starter kit
+Reference Dockerfile and entrypoint for the no-network sandbox. Copy into your repo and adapt.
+
+Dockerfile
+Download
+prepare_submission.py
+Download
+requirements.txt
+Download
+README.md
+Download
+Technical report
+LaTeX skeleton for your PDF report. Fill in method, data, and results, or use your own format.
+
+freuid_technical_report.tex
+Download
+references.bib
+Download
+README.md
+Download
+Kaggle discussion reply
+Short copy-paste template for the pinned thread. Point to your repo, no need to repeat instructions already there.
+
+REPLY_TEMPLATE.txt
+Download
+Docker sandbox contract
+Organizers execute your container with no network access. Test images are mounted as a flat directory of files only - no CSV, manifest, or subfolders inside /data.
+
+Mounts
+Host	Container	Access
+Private test images	/data/	read-only
+Output	/submissions/	read-write
+Input layout (/data/)
+/data/
+  3f49e6921f3f4b10910738f7e9b476f3.jpeg
+  c39d1c24d46a44a088991ddc7a072b7c.jpeg
+  ...
+The row id is the filename without extension. Supported extensions: .jpeg, .jpg, .png, .webp, .bmp, .tif, .tiff.
+
+Output (/submissions/submission.csv)
+id,label
+3f49e6921f3f4b10910738f7e9b476f3,0.99
+c39d1c24d46a44a088991ddc7a072b7c,0.99
+label is a finite float fraud score - higher = more confident the document is fraudulent. This matches the numeric semantics of the Kaggle leaderboard.
+
+Constraints
+docker run --network none - no internet at inference
+All model weights inside the image or a read-only mount - no runtime downloads
+No writes outside /submissions/
+One output row per image file; no missing or extra ids
+Local test
+docker build -t freuid-repro:local .
+
+docker run --rm \
+  --network none \
+  -v /path/to/flat/test/images:/data:ro \
+  -v "$(pwd)/out:/submissions" \
+  freuid-repro:local
+Replace the placeholder logic in predict_labels() inside prepare_submission.py with your model while keeping paths and output schema unchanged.
+
+Technical report
+A short PDF describing your method, training data, model architecture, inference procedure, external resources, and reproduction steps. The LaTeX template is optional.
+
+Minimum sections: introduction, method, data (including external sources), inference, results, reproducibility (commands, Docker image, hardware).
+
+Kaggle discussion reply template
+Post exactly one reply on the pinned Kaggle discussion thread by July 15th, 2026, 23:59 AoE (same as the final Kaggle submission deadline). Full requirements are in the Kaggle Overview → Code Requirements section. Download REPLY_TEMPLATE.txt. Keep it short: link your repository (with Docker build/run instructions in the README) and your technical report PDF. Do not duplicate content that is already in the repo.
+
+
+---
+FREUID Challenge 2026 - Reproducibility Package
+---
+
+Team name: [Kaggle team name]
+Kaggle usernames: [comma-separated]
+Final Kaggle submission: [label / date-time as shown on Kaggle]
+
+Repository (this should be public git repository): [URL]
+Commit SHA: [40-char hash]
+Technical report (PDF): [URL]
+
+We confirm this repository at the stated commit reproduces our selected final
+submission and complies with the competition rules.
+
+Signed (team captain): [Kaggle username]
+Date (UTC): [YYYY-MM-DD]
+Your repository README should cover Docker build/run, model weights, external data, and hardware - organizers will follow that, not a second copy on the forum.
+
+Kaggle leaderboard submission (separate from Docker)
+On Kaggle, upload a CSV with columns id,label for the public/private leaderboard:
+
+id,label
+3f49e6921f3f4b10910738f7e9b476f3,0.99

@@ -1,0 +1,6 @@
+# Minimal deps for the reference prepare_submission.py.
+# Replace / extend when you add PyTorch, ONNX Runtime, etc.
+
+numpy>=1.24,<3
+pandas>=2.0,<3
+Pillow>=10.0
