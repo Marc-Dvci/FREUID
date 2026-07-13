@@ -34,22 +34,27 @@ Do not mark an unchecked item complete without retaining command output or an ar
 - [x] Container runs on NVIDIA GPU and fails clearly if required artifacts are missing.
 - [x] Host entrypoint output has exactly one row per mounted image, no missing/extra ids, and correct fraud direction.
 - [x] Host organizer entrypoint and local frozen pipeline are compared exactly on the same images.
-- [x] Full-test runtime is conservatively extrapolated below the six-hour organizer cap with margin.
+- [x] Full-test runtime measured below the six-hour organizer cap with margin: 131 minutes for all
+      134,997 private images on one RTX 4070 (the earlier 79-minute extrapolation was optimistic).
 
 ## Kaggle final submission
 
 - [x] Per-template normalization was tested and rejected: public LB `0.33816 -> 0.54141`.
-- [ ] Frozen ensemble public-row CSV is submitted and its public score/status recorded.
-- [ ] Private images are inferred as one private-only set through the same Docker entrypoint.
+- [ ] Frozen ensemble CSV is submitted and its score/status recorded. BLOCKED: Kaggle API returns
+  401 for both tokens; upload `submission_final.csv` via the web UI.
+- [x] Private images are inferred as one private-only set through the same unchanged Docker
+  entrypoint: 134,997 images, exit 0, 131 minutes measured on RTX 4070.
 - [x] `scripts/assemble_final_submission.py` rejects partial IDs and merges exact rows by id in rehearsal.
-- [ ] Final CSV schema, ids/order, finiteness, range, row count, and SHA-256 are recorded.
+- [x] Final CSV schema, ids/order, finiteness, range, row count, and SHA-256 are recorded:
+  `submission_final.csv`, 142,818 rows, `239e31c4...a63b38`. Public half bit-identical to the
+  frozen base; private half bit-identical to the container output; zero `0.5` placeholders left.
 - [ ] Final Kaggle submission is `COMPLETE`; label/date-time are copied verbatim into the reply.
 
 ## Report and one allowed discussion reply
 
 - [x] Draft technical report contains method, data, licenses, pretrained weights, validation, results,
   inference, Docker reproduction, hardware, runtime, and seed.
-- [ ] Report PDF is committed and its URL resolves from the public frozen repository.
+- [x] Report PDF is committed and its URL resolves from the public frozen repository.
 - [ ] Reply contains Kaggle team, usernames, selected submission, repository URL, frozen SHA, report
   URL, captain signature, and UTC date.
 - [ ] Exactly one reply is posted to the pinned Kaggle thread by 2026-07-15 23:59 AoE.

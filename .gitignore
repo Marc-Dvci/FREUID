@@ -1,5 +1,8 @@
 # data (competition + external) — never redistribute
 the-freuid-challenge-2026-ijcai-ecai/
+final dataset/
+private_images/
+private_out/
 aug_preview/
 _smoke/
 

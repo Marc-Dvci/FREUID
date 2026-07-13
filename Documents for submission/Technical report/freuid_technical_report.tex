@@ -141,11 +141,13 @@ The PyTorch base is pinned to the following digest:
 sha256:77f17f843507062875ce8be2a6f76aa6\\
 aa3df7f9ef1e31d9d7432f4b0f563dee
 \end{center}
-Python dependencies are fully version-pinned. On an RTX 4070, sequential public inference for both
-members took approximately 274 seconds for 7,821 images at conservative batch sizes. Linear
-extrapolation gives about 79 minutes for 134,997 private images, leaving substantial margin below
-the organizer's six-hour A100 limit; the final container measurement is recorded in
-\texttt{FINAL\_AUDIT.md}.
+Python dependencies are fully version-pinned. The private test set was scored by running this
+container unchanged on the 134,997 released private images, under \texttt{--network none},
+\texttt{--read-only}, a read-only \texttt{/data}, and a writable \texttt{/submissions}. The measured
+wall-clock time was 131 minutes on one RTX 4070 (both members sequentially, batch 64, zero dataloader
+workers), which is well below the organizer's six-hour A100 limit. Throughput is bound by
+single-process image decoding rather than by the GPU, so a host with more dataloader workers will be
+faster. Hashes and the image digest are recorded in \texttt{FINAL\_AUDIT.md}.
 
 The selected public-row CSV retains placeholder 0.5 values for unreleased IDs. After private release,
 the unchanged container runs on private images alone. \texttt{scripts/assemble\_final\_submission.py}

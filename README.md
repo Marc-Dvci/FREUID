@@ -128,7 +128,10 @@ official sample IDs minus the public-image stems, verifies that their base value
 
 ## Hardware and timing
 
-Training: NVIDIA RTX 4070 12 GB, PyTorch 2.6.0, CUDA 12.4, seed 42. Two-model public inference took
-about 274 seconds for 7,821 images at conservative batch sizes; linear RTX 4070 extrapolation is
-about 79 minutes for 134,997 private images, well below the six-hour A100 limit. The actual Docker
-measurement, image digest, final CSV hash, and frozen commit are recorded in `FINAL_AUDIT.md`.
+Training: NVIDIA RTX 4070 12 GB, PyTorch 2.6.0, CUDA 12.4, seed 42.
+
+The released private set (134,997 images) was scored with this container unchanged, at its default
+batch size 64 and zero dataloader workers: **131 minutes measured** on one RTX 4070, well below the
+six-hour A100 limit. Throughput is bound by single-process image decoding, not by the GPU, so a host
+with more dataloader workers will be faster. The image digest, final CSV hash, and frozen commit are
+recorded in `FINAL_AUDIT.md`.

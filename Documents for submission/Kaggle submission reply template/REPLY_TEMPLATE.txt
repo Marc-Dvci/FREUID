@@ -4,19 +4,39 @@ FREUID Challenge 2026 — Reproducibility Package
 
 Team name: marcdonovici
 Kaggle usernames: marcdonovici
-Final Kaggle submission: [PENDING LABEL / DATE-TIME AS SHOWN ON KAGGLE]
+Final Kaggle submission: [PASTE THE LABEL / DATE-TIME EXACTLY AS KAGGLE SHOWS IT
+                          AFTER submission_final.csv REACHES "COMPLETE"]
 
-Repository (this should be public git repository): https://github.com/Marc-Dvci/FREUID
+Repository (public): https://github.com/Marc-Dvci/FREUID
 Commit SHA: 4db0ae5fd62c739a9398175c78e32add4f418a22
 Technical report (PDF): https://github.com/Marc-Dvci/FREUID/blob/main/Documents%20for%20submission/Technical%20report/freuid_technical_report.pdf
 
 The commit SHA above is the frozen source: architecture, training code, and both
-selected weights. The report PDF is documentation committed immediately after it,
-so it is linked on the frozen `main` branch rather than inside the source-freeze
-commit it cites.
+selected weights (Git LFS). It was pushed before the private images were released,
+and nothing affecting the model has changed since. Only inference, CSV merging, and
+documentation changed after release, as the rules allow.
+
+Method: a no-TTA weighted rank ensemble of a ConvNeXt-V2 Base detector (weight 0.75,
+512 px) and a DINOv2 ViT-B/14-with-registers detector (weight 0.25, 392 px). Each
+model emits a sigmoid fraud score; scores are converted to average ranks over the
+mounted test set and combined. Higher means more likely fraudulent.
+
+Reproduction:
+
+  git clone https://github.com/Marc-Dvci/FREUID && cd FREUID
+  git checkout 4db0ae5fd62c739a9398175c78e32add4f418a22
+  git lfs pull
+  docker build --pull -t freuid-repro:local .
+  docker run --rm --gpus all --network none --read-only \
+    -v /path/to/flat/test/images:/data:ro -v "$(pwd)/out:/submissions" \
+    freuid-repro:local
+
+This writes exactly /submissions/submission.csv with columns id,label, one row per
+image, the id being the filename stem. Scoring the 134,997 private images took 131
+minutes on a single RTX 4070.
 
 We confirm this repository at the stated commit reproduces our selected final
 submission and complies with the competition rules.
 
 Signed (team captain): marcdonovici
-Date (UTC): [PENDING YYYY-MM-DD — the day you post this reply]
+Date (UTC): [THE DAY YOU POST THIS]

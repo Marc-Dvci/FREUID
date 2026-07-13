@@ -125,6 +125,45 @@ Two defects were found only by executing the image; host-only checks had passed 
   `FROZEN_MANIFEST.json`; the image builds from that clone and reproduces the host output exactly.
 - The competition image tree, the organizer briefs, and internal working notes are not tracked.
 
+## Final private run — PASS (2026-07-13)
+
+The organizers released the private images on 2026-07-13, after the source freeze. The frozen image
+was run unchanged; no weight, architecture, checkpoint, training-code, or hyperparameter change was
+made after release.
+
+- Input: the 134,997 `private_test` images, extracted flat from the official archive. Their filename
+  stems equal exactly `sample_submission` IDs minus the official public-image stems — 0 missing, 0
+  extra, no duplicate stems. The archive's `sample_submission.csv` is byte-identical to the audited
+  copy (`c5350036…a879a8ab`), so the official ID set and row order did not change.
+- Command: `docker run --rm --gpus all --network none --read-only -v <private>:/data:ro
+  -v <out>:/submissions freuid-repro:local`, image
+  `sha256:4253468b407d569cec1799ccb22eeaf7596d5fde22f43bba993d241b85518d62`, defaults (batch 64,
+  zero workers). Exit 0.
+- **Measured wall clock: 7,871 s = 131 minutes** on one RTX 4070 (2026-07-13 16:17→18:28 UTC). This
+  supersedes the earlier 79-minute linear extrapolation, which was optimistic; the run is bound by
+  single-process image decoding, not the GPU. Still far below the six-hour A100 cap.
+- Output: 134,997 rows, one per image, `id,label`, all finite and in `[0,1]`.
+
+Merged with `scripts/assemble_final_submission.py` into the frozen public base. Independent
+re-validation of the merged file (not reusing the assembler's own checks):
+
+| Check | Result |
+|---|---|
+| Columns exactly `id,label`; 142,818 rows; IDs unique | PASS |
+| Row order equals the official sample submission | PASS |
+| All labels finite and in `[0,1]` | PASS |
+| 7,821 public rows bit-identical to the frozen public base | PASS |
+| 134,997 private rows bit-identical to the container output | PASS |
+| Rows still holding the `0.5` placeholder | 0 |
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| `submission_final.csv` | 7,551,061 | `239e31c498c7f3c9c2ceee47cc2ff36e47b5124abfdf9b6109611932eea63b38` |
+
+Both halves have mean exactly 0.5000, the expected signature of per-set rank normalization. Public
+and private ranks are normalized within their own mounted set, which is the frozen design: each
+leaderboard split is scored only against its own rows, so the metric is unaffected.
+
 ## Leaderboard — BLOCKED on Kaggle credentials
 
 Two Kaggle API tokens were tried for user `marcdonovici` (the 2026-06-14 one, and a replacement
@@ -138,22 +177,16 @@ Consequently:
    2026-07-13 ~08:05 Europe/Paris. The entrant confirmed directly on Kaggle that the private images
    were not yet released at that time, so the publication is pre-release. The API listing check
    could not corroborate it independently because the token is rejected.
-2. The frozen public candidate is **not submitted**; there is no public score or `COMPLETE` status.
+2. `submission_final.csv` is built, fully validated, and **not submitted**. There is no leaderboard
+   score and no `COMPLETE` status. Nothing here may be reported as a result.
 3. The submission label/date-time fields in the report and reply template remain `PENDING`.
 
-Both candidate CSVs passed the full local contract check (142,818 rows, columns exactly `id,label`,
-IDs unique and in official sample order, all labels finite and in `[0,1]`, 134,997 untouched `0.5`
-private placeholders):
+The upload is therefore a manual step for the entrant: upload `submission_final.csv`
+(`239e31c4…a63b38`) through the Kaggle web UI, confirm the submission reaches `COMPLETE`, and copy
+its label and date-time verbatim into `REPLY_TEMPLATE.txt` before posting the single allowed reply.
 
-| Candidate | Bytes | SHA-256 |
-|---|---:|---|
-| `submission_frozen_rank_75legacy_25dino_20260713.csv` (frozen) | 5,545,975 | `6a8d8ca4b58856e761e9aae4b65c18de47bf021512eabae2e818c11954529e6d` |
-| `submission_dinov2_raw_20260713.csv` (DINO-only) | 5,550,019 | `ce59e5ad5cee1aea2f4a07c3ab612356515d0a4541b9b48cc62270de2d914f62` |
-
-The frozen candidate hash matches `FROZEN_MANIFEST.json`. To clear this section, obtain a working
-token by downloading `kaggle.json` from `https://www.kaggle.com/settings` ("Create New Token") and
-placing that file at `~/.kaggle/kaggle.json` unedited, then submit the frozen candidate and record
-its label, date-time, and public score.
+To restore API access, download `kaggle.json` from `https://www.kaggle.com/settings` ("Create New
+Token") and place that file at `~/.kaggle/kaggle.json` unedited, rather than transcribing the key.
 
 ## Report and final reply — DRAFT / identity fields required
 
