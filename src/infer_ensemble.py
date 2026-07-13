@@ -8,12 +8,14 @@ Supports:
   * Fills missing test IDs (for private set not yet released) with 0.5
 
 Usage:
-  python src/infer_ensemble.py --ckpts checkpoints/cnxb384_full.pth checkpoints/dinov2b_full.pth checkpoints/fnoise_full.pth --tta --out submission_ensemble.csv
+  python src/infer_ensemble.py --ckpts checkpoints/cnxb512_MAURITIUS-ID.pth checkpoints/dinov2b_full.pth --weights 0.75 0.25 --out submission_ensemble.csv
 """
 import os, glob, argparse
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+from scipy.stats import rankdata
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -21,14 +23,23 @@ from dataset import FREUIDDataset, get_transforms
 from models import create_model
 
 EPS = 1e-6
+IMAGE_EXTENSIONS = {".jpeg", ".jpg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
 
 
 def build_test_df(img_dir):
-    files = []
-    for ext in ("*.jpeg", "*.jpg", "*.png"):
-        files += glob.glob(os.path.join(img_dir, ext))
-    ids = [os.path.splitext(os.path.basename(f))[0] for f in files]
-    return pd.DataFrame({"id": ids, "abs_path": files})
+    root = Path(img_dir)
+    if not root.is_dir():
+        raise FileNotFoundError(f"image directory not found: {root}")
+    files = sorted(
+        path for path in root.iterdir()
+        if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+    )
+    if not files:
+        raise FileNotFoundError(f"no supported images found directly under {root}")
+    ids = [path.stem for path in files]
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate filename stems in image directory")
+    return pd.DataFrame({"id": ids, "abs_path": [str(path) for path in files]})
 
 
 @torch.no_grad()
@@ -60,30 +71,39 @@ def predict_one(ckpt_path, test_df, batch_size, workers, device, tta=False):
 
 
 def rank_norm(x):
-    """Rank-normalize to [0, 1] — calibration-free common scale."""
-    order = np.argsort(np.argsort(x))
-    return order / max(len(x) - 1, 1)
+    """Average ranks in [0, 1]; tied scores carry no artificial row-order signal."""
+    if len(x) <= 1:
+        return np.zeros(len(x), dtype=np.float64)
+    return (rankdata(x, method="average") - 1.0) / (len(x) - 1)
 
 
-def ensemble_predictions(per_model, method="rank"):
+def ensemble_predictions(per_model, method="rank", weights=None):
     """Combine multiple model predictions."""
+    if not per_model:
+        raise ValueError("at least one prediction vector is required")
+    if weights is not None:
+        supplied = np.asarray(weights, dtype=np.float64)
+        if len(supplied) != len(per_model) or np.any(supplied < 0) or not np.isfinite(supplied).all() or supplied.sum() <= 0:
+            raise ValueError("weights must be one finite non-negative value per checkpoint")
     if len(per_model) == 1:
         return per_model[0]
     
     M = np.vstack(per_model)
+    w = np.ones(len(per_model), dtype=np.float64) if weights is None else np.asarray(weights, dtype=np.float64)
+    w /= w.sum()
     if method == "rank":
-        # Rank-average: each model contributes equally regardless of calibration
+        # Rank ensemble: each model contributes on a calibration-free common scale.
         ranked = np.array([rank_norm(p) for p in M])
-        return ranked.mean(axis=0)
+        return np.average(ranked, axis=0, weights=w)
     else:
-        # Geometric mean
+        # Weighted geometric mean.
         p = np.clip(M, EPS, 1 - EPS)
-        return np.exp(np.mean(np.log(p), axis=0))
+        return np.exp(np.average(np.log(p), axis=0, weights=w))
 
 
 def main(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    ckpts = sorted(sum([glob.glob(c) for c in args.ckpts], []))
+    ckpts = sum([sorted(glob.glob(c)) for c in args.ckpts], [])
     assert ckpts, f"no checkpoints matched {args.ckpts}"
     print(f"device: {device} | ckpts: {ckpts} | method: {args.method}")
     
@@ -96,11 +116,16 @@ def main(args):
         ids, probs = predict_one(ck, test_df, args.batch_size, args.workers, device, args.tta)
         order = np.argsort(ids)
         ids, probs = ids[order], probs[order]
-        ids_ref = ids if ids_ref is None else ids_ref
+        if ids_ref is None:
+            ids_ref = ids
+        elif not np.array_equal(ids_ref, ids):
+            raise ValueError(f"prediction ids differ for checkpoint {ck}")
         per_model.append(probs)
         print(f"  {os.path.basename(ck)}: mean={probs.mean():.4f} std={probs.std():.4f}")
     
-    ens = ensemble_predictions(per_model, method=args.method)
+    ens = ensemble_predictions(per_model, method=args.method, weights=args.weights)
+    if len(ens) != len(ids_ref) or not np.isfinite(ens).all() or np.any((ens < 0) | (ens > 1)):
+        raise ValueError("ensemble produced invalid scores")
 
     if args.normalize_per_template:
         # Rank within each document template, so every template contributes the same score
@@ -117,7 +142,12 @@ def main(args):
 
     # Align to sample_submission
     sub = pd.read_csv(os.path.join(args.data_dir, "sample_submission.csv"))
-    score_col = [c for c in sub.columns if c != "id"][0]
+    if list(sub.columns) != ["id", "label"] or sub["id"].isna().any() or sub["id"].duplicated().any():
+        raise ValueError("sample submission must contain unique ids and exactly id,label columns")
+    unknown = set(ids_ref) - set(sub["id"].astype(str))
+    if unknown:
+        raise ValueError(f"{len(unknown)} image ids are absent from sample submission")
+    score_col = "label"
     sub[score_col] = sub["id"].map(pred_map).fillna(args.fill).astype(float)
     n_pred = sub["id"].isin(pred_map).sum()
     sub.to_csv(args.out, index=False)
@@ -133,6 +163,8 @@ if __name__ == "__main__":
     p.add_argument("--ckpts", nargs="+", required=True, help="checkpoint glob(s)")
     p.add_argument("--out", default="submission_ensemble.csv")
     p.add_argument("--method", default="rank", choices=["rank", "geomean"])
+    p.add_argument("--weights", nargs="+", type=float,
+                   help="optional checkpoint weights in the same order as --ckpts")
     p.add_argument("--batch_size", type=int, default=24)
     p.add_argument("--workers", type=int, default=6)
     p.add_argument("--fill", type=float, default=0.5)

@@ -1,90 +1,134 @@
-# FREUID Challenge 2026 — solution
+# FREUID Challenge 2026 — frozen reproducibility package
 
-Fraud detection on identity documents for the [FREUID Challenge 2026 (IJCAI-ECAI)](https://www.kaggle.com/competitions/the-freuid-challenge-2026-ijcai-ecai).
+Identity-document fraud detector for the [FREUID Challenge 2026
+(IJCAI–ECAI)](https://www.kaggle.com/competitions/the-freuid-challenge-2026-ijcai-ecai).
+Repository source is MIT-licensed. Dataset and pretrained-weight licenses are separate and documented
+in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Licensed under the MIT License (see `LICENSE`).
+## Frozen method
 
-## Method
+The organizer-facing output is a pre-private-release, no-TTA weighted rank ensemble:
 
-An ensemble of three complementary single-logit detectors, rank-averaged.
+| Weight | Checkpoint | Backbone | Input | Parameters |
+|---:|---|---|---:|---:|
+| 0.75 | `cnxb512_MAURITIUS-ID.pth` | ConvNeXt-V2 Base FCMAE | 512 | 87,693,825 |
+| 0.25 | `dinov2b_full.pth` | DINOv2 ViT-B/14 reg4 | 392 | 86,133,505 |
 
-| Member | Backbone | Input | Role |
-|---|---|---|---|
-| `cnxb384` | ConvNeXt-V2 Base (`fcmae_ft_in22k_in1k_384`) | 384 | semantic / structural inconsistencies |
-| `dinov2b` | DINOv2 ViT-B/14 reg4 (`lvd142m`) | 392 | cross-domain self-supervised features, unseen templates |
-| `fnoise` | SRM + constrained Bayar stem → ConvNeXt-V2 Nano | 384 | template-agnostic noise forensics |
+Each model emits a sigmoid fraud score. Scores are converted to average ranks over the mounted test
+set (ties retain equal average rank), then combined as `0.75 * ConvNeXt + 0.25 * DINOv2`. Higher
+means more likely fraudulent. The weights, checkpoints, preprocessing, and no-TTA policy are frozen.
 
-Two design points matter more than the backbones:
+The weighting is deliberately conservative. ConvNeXt is much stronger on the 20-row official
+physical-recapture stress slice; DINOv2 provides limited diversity on unseen document layouts. The
+one-shot run also produced a 384-pixel ConvNeXt and a forensic-noise model, but both became
+near-constant on the disjoint unseen-attack probe and are excluded from inference.
 
-**Print-and-capture simulation.** The training set is ~99.97% fully digital while the test set
-emphasises print-and-capture and screen recapture. `src/augment_recapture.py` simulates the analog
-hole (down/up resample + double JPEG + blur, plus moiré, halftone, glare, vignette, paper grain,
-colour cast, sensor noise). It is applied to **both classes**, so "looks recaptured" cannot become a
-fraud shortcut.
+Print/capture simulation (resampling, repeated JPEG, blur, moiré, halftone, glare, vignetting, paper
+grain, colour cast, and sensor noise) is applied independently to both classes during training, so
+capture appearance cannot become a fraud shortcut.
 
-**The operating point is what the metric is really about.** APCER is read at the threshold where
-just 1% of bona-fides are rejected, so a heavy bona-fide false-positive tail is fatal: a handful of
-genuine documents scored near 1.0 push that threshold to ~0.99, and every attack scoring below it
-counts as missed. A single ConvNeXt baseline scores AuDET ≈ 0 yet APCER@1%BPCER ≈ 0.5 for exactly
-this reason. Rank-averaging diverse members is the direct remedy — a false positive from one member
-is demoted by the others — which is why the ensemble is the method rather than a nicety.
+## Data and validation
 
-*Negative result, recorded so it isn't retried:* we tested **per-template score normalization**
-(cluster the test set by document template, rank scores within each cluster, pool). The FREUID score
-is purely rank-based, and per-template score-scale drift is real and measurable, so this looked
-compelling. It is worse: public leaderboard 0.338 → 0.541. Rank-mapping cannot demote a confidently
-mis-scored bona-fide out of the top of its own cluster, and equalizing templates implicitly assumes
-equal fraud prevalence across them, which does not hold. The code remains in `src/template_norm.py`
-behind `--normalize_per_template` (off by default).
+- Official FREUID train: 69,352 images across five document types. Not redistributed.
+- Selected DINOv2 external train: 15,179 MIDV-Holo frames (CC BY-SA 2.5), 14 documents, two attack
+  families. External images are not redistributed.
+- OOD probe: 6,428 MIDV-Holo frames from six disjoint documents and two unseen attack families, with
+  zero image/clip/document overlap with external training.
+- The 20 official real-recapture rows are excluded from fitting and used only as a stress slice.
 
-## Data
+Per-template score normalization was tested and rejected: it worsened the public score from 0.33816
+to 0.54141 (lower is better). Horizontal-flip TTA was also rejected. These negative results remain
+documented so they are not silently reintroduced.
 
-* **FREUID train set** (competition, 69,352 images, 5 document types). Not redistributed here.
-* **External data** — 15,179 MIDV-Holo frames under CC BY-SA 2.5, cited in the report. The registry lives in
-  `src/external_data.py` (`python src/external_data.py --print_registry`); every source used in the
-  final model is listed with its URL and license in the technical report.
+## Obtain the frozen weights
 
-The MIDV-Holo training and probe partitions share no image, video clip, or document identity, and
-use disjoint attack families. Checkpoint selection uses the 6-document/2-unseen-attack probe with
-forced-recapture FREUID validation as a tie-break. The 20 official real-recapture rows are excluded
-from fitting and reported only as a small stress slice.
-
-## Reproducing
+The two selected `.pth` files are Git LFS objects, not runtime downloads:
 
 ```bash
 git lfs install
 git lfs pull
-
-pip install -r requirements.txt
-
-# train the ensemble (single RTX 4070, ~6 h)
-python run_all.py
-
-# inference -> submission.csv
-python src/infer_ensemble.py \
-  --ckpts checkpoints/cnxb384_full.pth checkpoints/dinov2b_full.pth checkpoints/fnoise_full.pth \
-  --tta --method rank --out submission.csv
 ```
 
-## Docker (organizer no-network sandbox)
+Verify them against [FROZEN_MANIFEST.json](FROZEN_MANIFEST.json) before building. A clone missing LFS
+objects must not be used: Docker `COPY` should receive the actual 344–351 MB files, not pointer text.
+
+## Organizer Docker
+
+The image has an immutable PyTorch/CUDA base digest, fully pinned Python packages, and both weights
+baked into `/models`. The default entrypoint requires CUDA, scans supported files directly under the
+flat `/data` mount, and writes only `/submissions/submission.csv`.
 
 ```bash
-docker build -t freuid-repro:local .
+docker build --pull -t freuid-repro:local .
 
-docker run --rm --gpus all --network none \
-  -v /path/to/flat/test/images:/data:ro \
+mkdir -p out
+docker run --rm --gpus all --network none --read-only \
+  -v /absolute/path/to/flat/test/images:/data:ro \
   -v "$(pwd)/out:/submissions" \
   freuid-repro:local
 ```
 
-Model weights are baked into the image; nothing is downloaded at runtime. The container reads a flat
-directory of images from `/data` (row id = filename stem) and writes `/submissions/submission.csv`
-with columns `id,label`, where `label` is a fraud score (higher = more likely fraudulent).
+Contract:
 
-For the final Kaggle CSV, run the container on the private images alone and merge its output by id
-with the frozen public-row CSV using `python scripts/assemble_final_submission.py`. This preserves
-exact equality between organizer-side private-only reproduction and the selected Kaggle private rows.
+- input: `.jpeg`, `.jpg`, `.png`, `.webp`, `.bmp`, `.tif`, or `.tiff`, case-insensitive;
+- ID: exact filename stem; duplicate stems fail nonzero;
+- output: exactly `id,label`, one row per mounted image, finite labels in `[0,1]`;
+- no network, runtime download, CSV input, subdirectory scan, or write outside `/submissions`.
 
-## Hardware
+The host entrypoint and repository inference path are parity-tested. The final audit records the
+actual container run separately; do not claim container verification unless its Docker checks are
+marked complete in [FINAL_AUDIT.md](FINAL_AUDIT.md).
 
-Trained on a single NVIDIA RTX 4070 (12 GB), PyTorch 2.6.0 + CUDA 12.4.
+## Training and local inference
+
+Create an environment and install the research dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+The pre-freeze one-shot training command was:
+
+```bash
+python run_all.py --force --no_infer --continue_on_error
+```
+
+It ran all three new candidates sequentially on one RTX 4070 for 292.8 minutes. The frozen DINOv2
+checkpoint is epoch 2. The legacy ConvNeXt checkpoint's complete arguments are embedded in the
+checkpoint and its training implementation remains in `src/train.py`.
+
+Reproduce frozen public-directory inference without Docker:
+
+```bash
+python src/infer_ensemble.py \
+  --ckpts checkpoints/cnxb512_MAURITIUS-ID.pth checkpoints/dinov2b_full.pth \
+  --weights 0.75 0.25 --method rank --batch_size 16 --workers 0 \
+  --out submission_frozen.csv
+```
+
+Do not add `--tta` or `--normalize_per_template`; neither is part of the frozen submission.
+
+## Final private-row assembly
+
+After release, run the unchanged container on the private images alone. Merge those rows into the
+frozen full public-base CSV:
+
+```bash
+python scripts/assemble_final_submission.py \
+  --base submission_frozen_rank_75legacy_25dino_20260713.csv \
+  --private out/submission.csv \
+  --sample the-freuid-challenge-2026-ijcai-ecai/sample_submission.csv \
+  --public-image-dir the-freuid-challenge-2026-ijcai-ecai/public_test/public_test \
+  --out submission_final.csv
+```
+
+The assembler refuses partial private output. It requires the private IDs to equal exactly the
+official sample IDs minus the public-image stems, verifies that their base values remain untouched
+`0.5` placeholders, preserves official order, and validates range/finiteness before emitting a hash.
+
+## Hardware and timing
+
+Training: NVIDIA RTX 4070 12 GB, PyTorch 2.6.0, CUDA 12.4, seed 42. Two-model public inference took
+about 274 seconds for 7,821 images at conservative batch sizes; linear RTX 4070 extrapolation is
+about 79 minutes for 134,997 private images, well below the six-hour A100 limit. The actual Docker
+measurement, image digest, final CSV hash, and frozen commit are recorded in `FINAL_AUDIT.md`.

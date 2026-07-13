@@ -85,26 +85,22 @@ def run_model(cfg, force=False):
     print(f"\n{cfg['tag']}: {status} in {elapsed/60:.1f} min")
     return result.returncode == 0, status
 
-def run_inference(include_legacy=False):
-    ckpts = []
-    for m in MODELS:
-        path = os.path.join("checkpoints", f"{m['tag']}.pth")
-        if os.path.exists(path):
-            ckpts.append(path)
-    if not ckpts:
-        print("ERROR: No checkpoints found!")
+def run_inference():
+    # Frozen pre-private-release ensemble. The two newly trained auxiliary members collapsed on
+    # the unseen-attack probe and are deliberately excluded rather than averaged blindly.
+    ckpts = [
+        os.path.join("checkpoints", "cnxb512_MAURITIUS-ID.pth"),
+        os.path.join("checkpoints", "dinov2b_full.pth"),
+    ]
+    missing = [path for path in ckpts if not os.path.exists(path)]
+    if missing:
+        print(f"ERROR: Missing selected checkpoint(s): {missing}")
         return
-    
-    # Keep the default ensemble compact for the organizer's 6-hour hidden-test
-    # inference cap. The legacy LODO checkpoint is opt-in because it measured
-    # poorly on OOD probes and adds runtime.
-    existing = os.path.join("checkpoints", "cnxb512_MAURITIUS-ID.pth")
-    if include_legacy and os.path.exists(existing):
-        ckpts.append(existing)
-    
+
     cmd = [PYTHON, "src/infer_ensemble.py",
            "--ckpts"] + ckpts + [
-           "--tta", "--out", "submission_ensemble.csv",
+           "--weights", "0.75", "0.25",
+           "--out", "submission_ensemble.csv",
            "--method", "rank"]
     print(f"\n{'='*60}")
     print(f"ENSEMBLE INFERENCE")
@@ -119,8 +115,6 @@ def parse_args():
     p.add_argument("--force", action="store_true", help="retrain even if a target checkpoint already exists")
     p.add_argument("--only", nargs="*", default=None, help="optional list of model tags to run")
     p.add_argument("--no_infer", action="store_true", help="skip ensemble inference after training")
-    p.add_argument("--include_legacy", action="store_true",
-                   help="include the old cnxb512 LODO checkpoint in ensemble inference")
     p.add_argument("--continue_on_error", action="store_true", help="continue training later models if one fails")
     return p.parse_args()
 
@@ -149,4 +143,4 @@ if __name__ == "__main__":
     
     # Generate ensemble submission
     if not args.no_infer:
-        run_inference(include_legacy=args.include_legacy)
+        run_inference()

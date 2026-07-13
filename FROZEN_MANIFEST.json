@@ -1,0 +1,39 @@
+{
+  "frozen_at_local": "2026-07-13T05:15:00+02:00",
+  "selection": "weighted_average_rank",
+  "weights": [0.75, 0.25],
+  "tta": false,
+  "per_template_normalization": false,
+  "seed": 42,
+  "models": [
+    {
+      "path": "checkpoints/cnxb512_MAURITIUS-ID.pth",
+      "bytes": 350933114,
+      "sha256": "aebf36acdf23dfe7a1542e9b07ba94e782910b547d6244f3fbb8d84083066510"
+    },
+    {
+      "path": "checkpoints/dinov2b_full.pth",
+      "bytes": 344607129,
+      "sha256": "f333c566bef9d6c2e9be8ba4a5b5efb5e708492e71162a135856a5e08ee1e8ca"
+    }
+  ],
+  "frozen_public_base": {
+    "local_path": "submission_frozen_rank_75legacy_25dino_20260713.csv",
+    "rows": 142818,
+    "public_predictions": 7821,
+    "private_placeholders": 134997,
+    "sha256": "6a8d8ca4b58856e761e9aae4b65c18de47bf021512eabae2e818c11954529e6d"
+  },
+  "excluded_one_shot_checkpoints": [
+    {
+      "path": "checkpoints/cnxb384_full.pth",
+      "reason": "near-constant unseen-probe predictions",
+      "sha256": "19a65739fb0aa2683e37bb8596f1b8e9e39784a4116ebf064ee5c94159428312"
+    },
+    {
+      "path": "checkpoints/fnoise_full.pth",
+      "reason": "near-constant unseen-probe predictions",
+      "sha256": "09d94d9ac3241a1c31848c3ee0801f0ebf2dce1e14de1d05e2298a2aa4bd3489"
+    }
+  ]
+}

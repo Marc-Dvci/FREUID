@@ -15,6 +15,5 @@ submissions
 *.png
 *.pdf
 checkpoints/*
-!checkpoints/cnxb384_full.pth
+!checkpoints/cnxb512_MAURITIUS-ID.pth
 !checkpoints/dinov2b_full.pth
-!checkpoints/fnoise_full.pth

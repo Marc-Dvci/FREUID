@@ -10,6 +10,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+IMAGE_EXTENSIONS = {".jpeg", ".jpg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
+FROZEN_BASE_SHA256 = "6a8d8ca4b58856e761e9aae4b65c18de47bf021512eabae2e818c11954529e6d"
+OFFICIAL_SAMPLE_SHA256 = "c5350036e0d1262bd03652d418271ac58c4196b5a210f79da269e948a879a8ab"
+
 
 def load_submission(path: Path, name: str) -> pd.DataFrame:
     frame = pd.read_csv(path, dtype={"id": str})
@@ -40,10 +44,21 @@ def main() -> int:
                         help="private-only submission.csv emitted by the Docker image")
     parser.add_argument("--sample", type=Path, required=True,
                         help="official full sample_submission.csv")
+    parser.add_argument("--public-image-dir", type=Path, required=True,
+                        help="official flat public_test image directory")
     parser.add_argument("--out", type=Path, default=Path("submission_final.csv"))
     parser.add_argument("--expected-base-fill", type=float, default=0.5,
                         help="require private ids to still have this placeholder in --base")
+    parser.add_argument("--expected-base-sha256", default=FROZEN_BASE_SHA256,
+                        help="refuse any public base other than this frozen SHA-256")
+    parser.add_argument("--expected-sample-sha256", default=OFFICIAL_SAMPLE_SHA256,
+                        help="refuse an unexpected official sample file")
     args = parser.parse_args()
+
+    if sha256(args.base).lower() != args.expected_base_sha256.lower():
+        raise ValueError("base SHA-256 does not match the frozen public-base artifact")
+    if sha256(args.sample).lower() != args.expected_sample_sha256.lower():
+        raise ValueError("sample SHA-256 does not match the audited official file")
 
     base = load_submission(args.base, "base")
     private = load_submission(args.private, "private")
@@ -53,6 +68,30 @@ def main() -> int:
 
     base_ids = set(base["id"])
     private_ids = set(private["id"])
+    if not args.public_image_dir.is_dir():
+        raise FileNotFoundError(f"public image directory not found: {args.public_image_dir}")
+    public_paths = [
+        path for path in args.public_image_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+    ]
+    public_id_list = [path.stem for path in public_paths]
+    if len(public_id_list) != len(set(public_id_list)):
+        raise ValueError("public image directory contains duplicate filename stems")
+    public_ids = set(public_id_list)
+    unknown_public = public_ids - base_ids
+    if unknown_public:
+        raise ValueError(
+            f"public images contain {len(unknown_public)} ids absent from sample, "
+            f"e.g. {sorted(unknown_public)[:3]}"
+        )
+    expected_private_ids = base_ids - public_ids
+    missing_private = expected_private_ids - private_ids
+    extra_private = private_ids - expected_private_ids
+    if missing_private or extra_private:
+        raise ValueError(
+            "private output ids do not exactly equal sample ids minus official public images: "
+            f"missing={len(missing_private)}, extra={len(extra_private)}"
+        )
     unknown = private_ids - base_ids
     if unknown:
         raise ValueError(

@@ -3,14 +3,19 @@ the-freuid-challenge-2026-ijcai-ecai/
 aug_preview/
 _smoke/
 
+# organizer-provided briefs and internal working notes — kept local, not published
+AUDIT_2026-07-02.md
+Challenge overview.txt
+Dataset description.txt
+_ctr_verify/
+
 # model weights (shipped via release / Docker, not git)
 checkpoints/
 *.pth
 !checkpoints/
 checkpoints/*
-!checkpoints/cnxb384_full.pth
+!checkpoints/cnxb512_MAURITIUS-ID.pth
 !checkpoints/dinov2b_full.pth
-!checkpoints/fnoise_full.pth
 
 # environment
 .venv/
@@ -30,6 +35,8 @@ _pub_clusters.csv
 *.bak
 _local_out/
 _docker_smoke*/
+evaluation_cache/
+real_recap_eval.csv
 *.aux
 *.bbl
 *.blg
