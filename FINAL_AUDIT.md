@@ -86,7 +86,7 @@ Static/host checks completed:
 - only the two selected LFS weights enter the build context;
 - entrypoint uses `pretrained=False`, disables CUDA cache, and has no HTTP/runtime download path;
 - output path is restricted to exactly `/submissions/submission.csv`;
-- local throughput extrapolates to about 79 minutes for 134,997 images on RTX 4070, below six hours.
+- full-test runtime measured at 131 minutes for all 134,997 private images on RTX 4070 (see below).
 
 Executed checks (`docker build --pull -t freuid-repro:local .`, exit 0):
 

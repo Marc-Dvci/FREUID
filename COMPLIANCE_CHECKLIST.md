@@ -7,14 +7,17 @@ Do not mark an unchecked item complete without retaining command output or an ar
 
 - [x] Repository is public: `https://github.com/Marc-Dvci/FREUID` (GitHub API checked 2026-07-12).
 - [x] Source is under the OSI-approved MIT license.
-- [x] Final architecture, training code, and both selected weights are committed and pushed:
-  frozen source `4db0ae5fd62c739a9398175c78e32add4f418a22`, report `b92015e8`.
-  NOT YET CONFIRMED that this preceded private-image release — see the note below.
+- [x] Final architecture, training code, and both selected weights are committed and pushed before
+  private-image release: frozen source `4db0ae5fd62c739a9398175c78e32add4f418a22` (pushed
+  2026-07-13 ~08:05 Europe/Paris; private images dropped later that day).
 - [x] Two selected `.pth` files are present through Git LFS after a clean clone (`git lfs pull`)
   and both hash-match `FROZEN_MANIFEST.json`.
 - [x] Frozen 40-character commit SHA is recorded in the report and Kaggle reply.
-- [ ] No weight, architecture, checkpoint, training-code, or hyperparameter change is made after
-  private-image release. Only inference, CSV merging, documentation, and packaging may change.
+- [x] No weight, architecture, checkpoint, training-code, or hyperparameter change after
+  private-image release. Verified path-by-path against the frozen commit: `src`, `docker`,
+  `checkpoints`, `Dockerfile`, `docker-requirements.txt`, `requirements.txt`, `run_all.py`,
+  `scripts`, and `FROZEN_MANIFEST.json` are byte-identical to `4db0ae5f`. Only documentation
+  changed after release.
 
 ## Docker sandbox contract
 
@@ -48,7 +51,9 @@ Do not mark an unchecked item complete without retaining command output or an ar
 - [x] Final CSV schema, ids/order, finiteness, range, row count, and SHA-256 are recorded:
   `submission_final.csv`, 142,818 rows, `239e31c4...a63b38`. Public half bit-identical to the
   frozen base; private half bit-identical to the container output; zero `0.5` placeholders left.
-- [ ] Final Kaggle submission is `COMPLETE`; label/date-time are copied verbatim into the reply.
+- [ ] Final Kaggle submission is `COMPLETE`. The label/date-time are in the reply
+  (`submission_final.csv - 8:39 PM`), but the `COMPLETE` status could not be read back — the Kaggle
+  API returns 401. Confirm it on the submissions page before posting.
 
 ## Report and one allowed discussion reply
 
