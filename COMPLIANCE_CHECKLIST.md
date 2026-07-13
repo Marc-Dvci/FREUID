@@ -7,10 +7,12 @@ Do not mark an unchecked item complete without retaining command output or an ar
 
 - [x] Repository is public: `https://github.com/Marc-Dvci/FREUID` (GitHub API checked 2026-07-12).
 - [x] Source is under the OSI-approved MIT license.
-- [ ] Final architecture, training code, and both selected weights are committed before the
-  organizers release private images on 2026-07-13.
-- [ ] Two selected `.pth` files are present through Git LFS after a clean clone (`git lfs pull`).
-- [ ] Frozen 40-character commit SHA is recorded in the report and Kaggle reply.
+- [x] Final architecture, training code, and both selected weights are committed and pushed:
+  frozen source `4db0ae5fd62c739a9398175c78e32add4f418a22`, report `b92015e8`.
+  NOT YET CONFIRMED that this preceded private-image release — see the note below.
+- [x] Two selected `.pth` files are present through Git LFS after a clean clone (`git lfs pull`)
+  and both hash-match `FROZEN_MANIFEST.json`.
+- [x] Frozen 40-character commit SHA is recorded in the report and Kaggle reply.
 - [ ] No weight, architecture, checkpoint, training-code, or hyperparameter change is made after
   private-image release. Only inference, CSV merging, documentation, and packaging may change.
 
@@ -24,7 +26,8 @@ Do not mark an unchecked item complete without retaining command output or an ar
 - [x] Both selected weights are copied into the image; model creation uses `pretrained=False`.
 - [x] Inference makes no HTTP/API calls and does not need a writable model cache.
 - [x] Base image is pinned by immutable digest.
-- [ ] Image builds from a clean clone after `git lfs pull`.
+- [x] Image builds from a clean clone after `git lfs pull`, and its container output is identical
+      to the host run on the official fixture.
 - [x] Container succeeds with `--network none`, `/data:ro`, and writable `/submissions`.
 - [x] Container succeeds with a read-only root filesystem (no writes outside `/submissions`).
       Required `VOLUME ["/tmp"]`: `torch._dynamo` calls `tempfile.gettempdir()` at import.

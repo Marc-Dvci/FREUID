@@ -9,9 +9,9 @@ the final Kaggle reply.
 - **Policy:** `0.75 * average_rank(ConvNeXt) + 0.25 * average_rank(DINOv2)`.
 - **TTA:** off. **Per-template normalization:** off.
 - **Selection time recorded:** 2026-07-13 05:15 Europe/Paris.
-- **Private release state:** last authenticated competition-file check at approximately 04:00 showed
-  only `public_test/...`; another authenticated check is required before claiming publication was
-  pre-release.
+- **Private release state:** UNVERIFIED — the Kaggle token is expired (HTTP 401), so the listing
+  could not be re-checked. The last successful check (~04:00) showed only `public_test/...`. Do not
+  claim publication was pre-release until this is confirmed. See the leaderboard section.
 - **Manifest:** `FROZEN_MANIFEST.json`.
 
 | Artifact | Bytes | SHA-256 |
@@ -115,21 +115,42 @@ Two defects were found only by executing the image; host-only checks had passed 
    bare `--read-only` now works with no extra caller flags and no persisted write outside
    `/submissions`.
 
-## Publication and leaderboard — BLOCKED pending user authorization
+## Publication — PASS (pushed and verified from a clean clone 2026-07-13)
 
-- Current committed source baseline: `1024265776a0f865a06a49ddb2029e3bab6457b2`.
-- Final source/weights/report changes are not yet committed or pushed.
-- Git LFS attributes correctly select both final `.pth` files.
-- Repository visibility was verified public: `https://github.com/Marc-Dvci/FREUID`.
-- DINO-only and frozen 0.75/0.25 CSVs passed local contract checks, but Kaggle upload was rejected by
-  the managed environment's external-action approval quota before any upload occurred.
+- Frozen source and both selected weights: `4db0ae5fd62c739a9398175c78e32add4f418a22`.
+- Technical report (documentation only): `b92015e86bde97620d7bdb69ebbd9c2448efc903`, now `main`.
+- Pushed to the public repository `https://github.com/Marc-Dvci/FREUID`.
+- A clean public clone plus `git lfs pull` yields both `.pth` files as real objects that hash-match
+  `FROZEN_MANIFEST.json`; the image builds from that clone and reproduces the host output exactly.
+- The competition image tree, the organizer briefs, and internal working notes are not tracked.
 
-Required before code freeze can be claimed:
+## Leaderboard and pre-release timing — BLOCKED on expired Kaggle credentials
 
-1. Recheck competition file listing and record whether private images have appeared.
-2. Commit selected LFS weights and all frozen source; record the new 40-character SHA.
-3. Push and verify from a clean public clone with `git lfs pull`.
-4. Submit frozen public candidate, wait for `COMPLETE`, and record its exact public score/date-time.
+The Kaggle API token in `~/.kaggle/kaggle.json` (issued 2026-06-14) is rejected with HTTP 401 on
+every endpoint, including an unauthenticated-looking competition list. It is expired or revoked, so
+none of the following could be done and none may be claimed:
+
+1. **Pre-release timing is UNVERIFIED.** The freeze rule requires the weights and source to be
+   published before the organizers release the private images. The push above is recorded at
+   2026-07-13 ~08:05 Europe/Paris, but the competition file listing could not be re-checked, so it
+   is not established that this preceded private release. Do not assert "frozen pre-release" in the
+   Kaggle reply until a listing check confirms it. If private images had already appeared, say so
+   plainly rather than implying otherwise; the freeze content itself is unchanged either way.
+2. The frozen public candidate is **not submitted**; there is no public score or `COMPLETE` status.
+3. The submission label/date-time fields in the report and reply template remain `PENDING`.
+
+Both candidate CSVs passed the full local contract check (142,818 rows, columns exactly `id,label`,
+IDs unique and in official sample order, all labels finite and in `[0,1]`, 134,997 untouched `0.5`
+private placeholders):
+
+| Candidate | Bytes | SHA-256 |
+|---|---:|---|
+| `submission_frozen_rank_75legacy_25dino_20260713.csv` (frozen) | 5,545,975 | `6a8d8ca4b58856e761e9aae4b65c18de47bf021512eabae2e818c11954529e6d` |
+| `submission_dinov2_raw_20260713.csv` (DINO-only) | 5,550,019 | `ce59e5ad5cee1aea2f4a07c3ab612356515d0a4541b9b48cc62270de2d914f62` |
+
+The frozen candidate's hash matches `FROZEN_MANIFEST.json`. To clear this section, regenerate the
+token at `https://www.kaggle.com/settings` ("Create New Token"), overwrite `~/.kaggle/kaggle.json`,
+then re-run the listing check and submit the frozen candidate.
 
 ## Report and final reply — DRAFT / identity fields required
 
