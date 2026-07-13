@@ -9,9 +9,10 @@ the final Kaggle reply.
 - **Policy:** `0.75 * average_rank(ConvNeXt) + 0.25 * average_rank(DINOv2)`.
 - **TTA:** off. **Per-template normalization:** off.
 - **Selection time recorded:** 2026-07-13 05:15 Europe/Paris.
-- **Private release state:** UNVERIFIED — the Kaggle token is expired (HTTP 401), so the listing
-  could not be re-checked. The last successful check (~04:00) showed only `public_test/...`. Do not
-  claim publication was pre-release until this is confirmed. See the leaderboard section.
+- **Private release state:** not yet released. The API listing could not be re-checked (token
+  expired, HTTP 401); the entrant confirmed directly on Kaggle on 2026-07-13 that the private images
+  were still unreleased at the time of the freeze push. The last successful API check (~04:00) also
+  showed only `public_test/...`.
 - **Manifest:** `FROZEN_MANIFEST.json`.
 
 | Artifact | Bytes | SHA-256 |
@@ -124,18 +125,19 @@ Two defects were found only by executing the image; host-only checks had passed 
   `FROZEN_MANIFEST.json`; the image builds from that clone and reproduces the host output exactly.
 - The competition image tree, the organizer briefs, and internal working notes are not tracked.
 
-## Leaderboard and pre-release timing — BLOCKED on expired Kaggle credentials
+## Leaderboard — BLOCKED on Kaggle credentials
 
-The Kaggle API token in `~/.kaggle/kaggle.json` (issued 2026-06-14) is rejected with HTTP 401 on
-every endpoint, including an unauthenticated-looking competition list. It is expired or revoked, so
-none of the following could be done and none may be claimed:
+Two Kaggle API tokens were tried for user `marcdonovici` (the 2026-06-14 one, and a replacement
+issued 2026-07-13). Both are rejected with `{"code":401,"message":"Unauthenticated"}` on every
+endpoint, including a plain competition list, and the second was confirmed by a direct HTTPS basic-
+auth call that bypasses the CLI entirely. No `KAGGLE_USERNAME`/`KAGGLE_KEY` environment override is
+set and the credentials file is well-formed, so this is the credential itself, not the tooling.
+Consequently:
 
-1. **Pre-release timing is UNVERIFIED.** The freeze rule requires the weights and source to be
-   published before the organizers release the private images. The push above is recorded at
-   2026-07-13 ~08:05 Europe/Paris, but the competition file listing could not be re-checked, so it
-   is not established that this preceded private release. Do not assert "frozen pre-release" in the
-   Kaggle reply until a listing check confirms it. If private images had already appeared, say so
-   plainly rather than implying otherwise; the freeze content itself is unchanged either way.
+1. **Pre-release timing: confirmed by the entrant, not by API.** The freeze push is recorded at
+   2026-07-13 ~08:05 Europe/Paris. The entrant confirmed directly on Kaggle that the private images
+   were not yet released at that time, so the publication is pre-release. The API listing check
+   could not corroborate it independently because the token is rejected.
 2. The frozen public candidate is **not submitted**; there is no public score or `COMPLETE` status.
 3. The submission label/date-time fields in the report and reply template remain `PENDING`.
 
@@ -148,9 +150,10 @@ private placeholders):
 | `submission_frozen_rank_75legacy_25dino_20260713.csv` (frozen) | 5,545,975 | `6a8d8ca4b58856e761e9aae4b65c18de47bf021512eabae2e818c11954529e6d` |
 | `submission_dinov2_raw_20260713.csv` (DINO-only) | 5,550,019 | `ce59e5ad5cee1aea2f4a07c3ab612356515d0a4541b9b48cc62270de2d914f62` |
 
-The frozen candidate's hash matches `FROZEN_MANIFEST.json`. To clear this section, regenerate the
-token at `https://www.kaggle.com/settings` ("Create New Token"), overwrite `~/.kaggle/kaggle.json`,
-then re-run the listing check and submit the frozen candidate.
+The frozen candidate hash matches `FROZEN_MANIFEST.json`. To clear this section, obtain a working
+token by downloading `kaggle.json` from `https://www.kaggle.com/settings` ("Create New Token") and
+placing that file at `~/.kaggle/kaggle.json` unedited, then submit the frozen candidate and record
+its label, date-time, and public score.
 
 ## Report and final reply — DRAFT / identity fields required
 
