@@ -2,16 +2,21 @@
 FREUID Challenge 2026 — Reproducibility Package
 ---
 
-Team name: [Kaggle team name]
-Kaggle usernames: [comma-separated]
-Final Kaggle submission: [label / date-time as shown on Kaggle]
+Team name: marcdonovici
+Kaggle usernames: marcdonovici
+Final Kaggle submission: [PENDING LABEL / DATE-TIME AS SHOWN ON KAGGLE]
 
-Repository (this should be public git repository): [URL]
-Commit SHA: [40-char hash]
-Technical report (PDF): [URL]
+Repository (this should be public git repository): https://github.com/Marc-Dvci/FREUID
+Commit SHA: 4db0ae5fd62c739a9398175c78e32add4f418a22
+Technical report (PDF): https://github.com/Marc-Dvci/FREUID/blob/main/Documents%20for%20submission/Technical%20report/freuid_technical_report.pdf
+
+The commit SHA above is the frozen source: architecture, training code, and both
+selected weights. The report PDF is documentation committed immediately after it,
+so it is linked on the frozen `main` branch rather than inside the source-freeze
+commit it cites.
 
 We confirm this repository at the stated commit reproduces our selected final
 submission and complies with the competition rules.
 
-Signed (team captain): [Kaggle username]
-Date (UTC): [YYYY-MM-DD]
+Signed (team captain): marcdonovici
+Date (UTC): [PENDING YYYY-MM-DD — the day you post this reply]

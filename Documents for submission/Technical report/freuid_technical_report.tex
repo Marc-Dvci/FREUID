@@ -1,170 +1,173 @@
-% FREUID Challenge 2026 — Technical Report Template (optional)
-% Compile: pdflatex freuid_technical_report.tex && bibtex freuid_technical_report && pdflatex x2
-% License: CC0 — organizers provide this template; fill in your team content.
-
-\documentclass[11pt,a4paper]{article}
-
+\documentclass[10pt,a4paper]{article}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{lmodern}
-\usepackage{microtype}
-\usepackage{geometry}
-\usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{amsmath}
-\usepackage{hyperref}
-\usepackage{xcolor}
-\usepackage{enumitem}
+\usepackage{lmodern,geometry,booktabs,amsmath,hyperref,xcolor}
+\geometry{margin=2.1cm}
+\hypersetup{colorlinks=true,linkcolor=blue!55!black,citecolor=blue!55!black,urlcolor=blue!55!black}
+\newcommand{\teamname}{Marc Donovici}
+\newcommand{\kaggleteam}{marcdonovici}
+\newcommand{\freezesha}{4db0ae5fd62c739a9398175c78e32add4f418a22}
 
-\geometry{margin=2.5cm}
-\hypersetup{
-  colorlinks=true,
-  linkcolor=blue!60!black,
-  citecolor=blue!60!black,
-  urlcolor=blue!60!black,
-}
-
-\newcommand{\teamname}{[Team Name]}
-\newcommand{\kaggleteam}{[Kaggle Team Name]}
-\newcommand{\contactemail}{[corresponding@email.com]}
-\newcommand{\reportdate}{\today}
-
-\title{%
-  \textbf{The FREUID Challenge 2026}\\[0.4em]
-  \large Technical Report --- \teamname
-}
-\author{%
-  [Author One]\textsuperscript{1},
-  [Author Two]\textsuperscript{2}\\
-  \small
-  \textsuperscript{1}[Affiliation One] \quad
-  \textsuperscript{2}[Affiliation Two]\\
-  \texttt{\contactemail}
-}
-\date{Report date: \reportdate}
+\title{\textbf{The FREUID Challenge 2026}\\\large Technical Report --- \teamname}
+\author{Marc Donovici\\\texttt{azerty10997@gmail.com}}
+\date{13 July 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Summarize your solution in 150--250 words: task, key idea, model family, training data,
-main results on the FREUID validation/public leaderboard, and one sentence on
-reproducibility (code, container, etc.). Mention the official metric (FREUID Score;
-lower is better).
+We address binary identity-document fraud detection under cross-document, digital, and
+print--capture domain shift. Our frozen submission is a no-TTA weighted rank ensemble of a
+ConvNeXt-V2 Base detector (weight 0.75) and a DINOv2 ViT-B/14-with-registers detector (weight
+0.25). The former supplies the strongest observed physical-recapture operating point; the latter
+adds representations trained across unseen layouts and attack families. Recapture simulation is
+applied to both classes, preventing capture appearance from becoming a fraud shortcut. Model
+selection uses only official training data and a disjoint MIDV-Holo probe; private test images and
+labels are never used for fitting or selection. A one-shot three-member training run was completed
+before private release, but two auxiliary models collapsed on the unseen-attack probe and were
+excluded. Per-template score normalization was also rejected after worsening the public FREUID
+Score from 0.33816 to 0.54141 (lower is better). The public repository contains pinned weights,
+source, an immutable-base Dockerfile, and an offline entrypoint that maps flat filenames in
+\texttt{/data} to exactly \texttt{/submissions/submission.csv}.
 \end{abstract}
 
-\noindent\textbf{Competition:} The FREUID Challenge 2026 (IJCAI-ECAI 2026)\\
+\noindent\textbf{Competition:} FREUID Challenge 2026 (IJCAI--ECAI 2026)\\
 \textbf{Kaggle team:} \kaggleteam\\
-\textbf{Code:} \url{https://github.com/your-org/your-repo} (commit \texttt{[SHA]})\\
+\textbf{Code:} \url{https://github.com/Marc-Dvci/FREUID}, frozen source commit
+\texttt{\freezesha}
 
-\section{Introduction}
-\label{sec:intro}
-Briefly state the fraud-detection problem, threat model (physical, GenAI, print-and-capture),
-and your high-level approach. Cite the challenge proposal or website if helpful~\cite{freuid2026}.
+\section{Problem and metric}
+FREUID targets bona-fide versus fraudulent identity documents, including physical manipulation,
+generative editing, and print--capture attacks on document domains under-represented in public
+benchmarks~\cite{freuid2026}. Labels are 0 for bona-fide and 1 for fraud; larger submitted scores
+mean more likely fraudulent. The minimized FREUID Score is the harmonic combination of goodness
+terms $1-\mathrm{AuDET}$ and $1-\mathrm{APCER}_{\mathrm{BPCER}=1\%}$. Consequently, a small tail of
+high-scored bona-fides can be more damaging than average classification error suggests.
 
 \section{Method}
-\label{sec:method}
+\subsection{Selected detectors}
+The selected ConvNeXt-V2 Base checkpoint uses the FCMAE ImageNet-22k/1k initialization
+\cite{convnextv2}, a linear binary head, and $512\times512$ input (87,693,825 parameters). It was
+fine-tuned with a leave-one-document-domain-out split, medium-strength recapture augmentation, and
+gradient checkpointing during training. The selected DINOv2 model uses ViT-B/14 with
+register tokens and LVD-142M initialization~\cite{dinov2}, a linear head, and $392\times392$ input
+(86,133,505 parameters). Both produce one logit and use sigmoid probabilities before ensembling.
 
-\subsection{Overview}
-Describe the end-to-end pipeline (preprocessing $\rightarrow$ model $\rightarrow$ score
-calibration). Include a block diagram if useful.
+For a test set of $n$ images, each detector's probabilities are mapped to average ranks
+$r_i\in[0,1]$; tied probabilities receive the same average rank. The final fraud score is
+\begin{equation}
+  s_i = 0.75\,r_i^{\mathrm{ConvNeXt}} + 0.25\,r_i^{\mathrm{DINOv2}}.
+\end{equation}
+These weights, checkpoints, and no-TTA policy were frozen before private-test release. Rank
+combination controls incompatible calibration and limits influence from the less physically robust
+DINOv2 member. Horizontal-flip TTA was rejected because it worsened DINOv2 on the full unseen probe
+(FREUID 0.97752 to 0.99371).
 
-\subsection{Model architecture}
-Detail backbone, heads, input resolution, and any ensembles. Report parameter count and
-inference batch size.
+\subsection{Training}
+Training uses binary cross-entropy with logits, AdamW, cosine decay after a one-epoch warm-up,
+automatic mixed precision, channels-last tensors, and seed 42. DINOv2 was fine-tuned for three
+epochs with batch size 16, two-step gradient accumulation (effective batch 32), learning rate
+$10^{-4}$, weight decay 0.01, and recapture probability 0.35. Epoch 2 was selected by the disjoint
+OOD probe (checkpoint selection score 0.97484 on its fixed 3,000-row cap). The ConvNeXt checkpoint
+used six epochs, batch size 8, four-step accumulation, learning rate $10^{-4}$, weight decay 0.01,
+dropout 0.2, and recapture probability 0.6; its full arguments are embedded in the checkpoint.
 
-\subsection{Training objective and procedure}
-Loss function(s), optimizer, learning-rate schedule, epochs, early stopping, class
-balancing, and augmentations. State whether you trained from scratch or fine-tuned
-pre-trained weights.
+The recapture transform models resize/upsample, repeated JPEG compression, blur, moir\'e,
+halftoning, glare, vignetting, paper grain, colour cast, and sensor noise. It is sampled independently
+for both classes. A pre-freeze one-shot run additionally trained ConvNeXt-V2 Base at 384 pixels and
+a constrained Bayar/SRM ConvNeXt-V2 Nano forensic model. Their OOD outputs were near-constant; they
+were excluded rather than allowed to create arbitrary filename-order ranks.
 
-\subsection{Score calibration}
-Explain how raw model outputs map to submission scores in $[0,1]$.
-Note any post-processing applied identically at train and test time.
+\section{Data and validation}
+The official training release contains 69,352 samples from five document types (40,005 bona-fide,
+29,347 fraud). Competition images are not redistributed. The DINOv2 run holds the 20 official
+real-recapture rows out of fitting, reserves a fixed stratified 5\% monitoring split, and adds
+15,179 MIDV-Holo frames to training (9,070 bona-fide, 6,109 fraud)~\cite{midvholo}. The external
+training partition covers 14 documents and two attack families. A completely disjoint probe covers
+6 other documents and 2 unseen attack families (6,428 rows); there is no shared image, clip, or
+document identity. MIDV-Holo is CC BY-SA 2.5 and includes Generated Photos identities as documented
+by its authors. Pretrained DINOv2 parameters are Apache-2.0; ConvNeXt-V2 pretrained parameters are
+CC BY-NC 4.0. Full notices and URLs are in \texttt{THIRD\_PARTY\_NOTICES.md}.
 
-\section{Data}
-\label{sec:data}
+The small 20-row official real-recapture slice is reported only as a stress test. Public leaderboard
+feedback is a secondary sanity check because its domains and prevalence need not represent the
+134,997-row private release. No public or private test image participates in training, adaptation,
+clustering, or checkpoint selection.
 
-\subsection{FREUID training set}
-How you used the official \texttt{train/} images and \texttt{train.csv} metadata
-(e.g.\ splits, stratification by \texttt{type} or \texttt{is\_digital}).
-
-\subsection{External data and pre-trained models}
-List every external dataset, checkpoint, or API used. Include license and URL.
-If none, state explicitly: \emph{No external data beyond FREUID and publicly licensed
-pre-trained weights.}
-
-\subsection{Validation strategy}
-Describe local validation splits and how they relate to the public leaderboard.
-Clarify that private test labels were not used for model selection.
-
-\section{Inference}
-\label{sec:inference}
-Test-time preprocessing, tiling/cropping, TTA, ensembling, and hardware. Document the
-exact command or Docker entrypoint used to produce \texttt{submission.csv} with columns
-\texttt{id,label} (reproduction sandbox).
-
-\section{Results}
-\label{sec:results}
-
+\section{Results and ablations}
 \begin{table}[h]
-  \centering
-  \caption{Summary of main results (fill with your numbers).}
-  \label{tab:results}
-  \begin{tabular}{lcc}
-    \toprule
-    Split / Leaderboard & FREUID $\downarrow$ & Notes \\
-    \midrule
-    Local validation      & [0.xxx] & \\
-    Public leaderboard    & [0.xxx] & Selected final submission \\
-    Private (if known)    & [--]    & At submission time \\
-    \bottomrule
-  \end{tabular}
+\centering\small
+\caption{Pre-freeze evaluation (lower is better). The OOD probe uses all 6,428 rows.}
+\begin{tabular}{lccc}
+\toprule
+Candidate / split & FREUID & AuDET & APCER@1\% BPCER\\
+\midrule
+DINOv2, unseen MIDV-Holo & 0.97752 & 0.50052 & 0.98850\\
+ConvNeXt, unseen MIDV-Holo & 0.98288 & 0.54507 & 0.99127\\
+Frozen 0.75/0.25 ensemble, unseen MIDV-Holo & 0.98672 & 0.54191 & 0.99326\\
+ConvNeXt, official real-recapture stress & 0.10584 & 0.06548 & 0.14286\\
+DINOv2, official real-recapture stress & 0.67570 & 0.40476 & 0.77714\\
+Frozen 0.75/0.25 ensemble, real-recapture stress & 0.14890 & 0.08333 & 0.20571\\
+\bottomrule
+\end{tabular}
 \end{table}
 
-Optional: report AuDET and APCER@1\%BPCER separately if you computed them offline.
+The conflicting probes motivate conservative weighting: DINOv2 is marginally best on new external
+documents, whereas ConvNeXt is decisively better on the only official physical-recapture sample.
+The existing ConvNeXt public submission scored 0.33816. Per-template clustering and within-template
+normalization degraded it to 0.54141 and is disabled. The exact frozen ensemble public score remains
+\textbf{pending Kaggle processing at report build time}; it must be filled before the final PDF.
 
-\section{Reproducibility}
-\label{sec:repro}
-\begin{itemize}[noitemsep]
-  \item \textbf{Repository:} URL + frozen commit SHA.
-  \item \textbf{Docker:} image name or build instructions; where weights live.
-  \item \textbf{Dependencies:} Python/CUDA versions; \texttt{requirements.txt}.
-  \item \textbf{Runtime:} expected GPU/CPU and wall-clock for full test inference.
-  \item \textbf{Randomness:} seeds and known non-deterministic ops.
-  \item \textbf{Network:} confirm inference requires \texttt{--network none} (no downloads at runtime).
+\section{Inference and Docker reproduction}
+Inference resizes and normalizes each image according to its checkpoint, uses FP16 autocast on CUDA,
+and does not use TTA. The Docker entrypoint scans only supported image files directly below
+\texttt{/data}; the identifier is the filename stem. It rejects empty input, duplicate stems,
+missing weights, invalid ensemble weights, non-finite predictions, or any output path other than
+\texttt{/submissions/submission.csv}. The output has exactly \texttt{id,label}; all labels are finite
+in $[0,1]$. The root filesystem can be read-only, model creation uses
+\texttt{pretrained=False}, CUDA kernel caching is disabled, and no runtime network or model cache is
+needed.
+
+\begin{verbatim}
+git lfs install && git lfs pull
+docker build -t freuid-repro:local .
+docker run --rm --gpus all --network none --read-only \
+  -v /path/to/flat/private_images:/data:ro \
+  -v "$(pwd)/out:/submissions" freuid-repro:local
+\end{verbatim}
+
+The PyTorch base is pinned to the following digest:
+\begin{center}\small\ttfamily
+sha256:77f17f843507062875ce8be2a6f76aa6\\
+aa3df7f9ef1e31d9d7432f4b0f563dee
+\end{center}
+Python dependencies are fully version-pinned. On an RTX 4070, sequential public inference for both
+members took approximately 274 seconds for 7,821 images at conservative batch sizes. Linear
+extrapolation gives about 79 minutes for 134,997 private images, leaving substantial margin below
+the organizer's six-hour A100 limit; the final container measurement is recorded in
+\texttt{FINAL\_AUDIT.md}.
+
+The selected public-row CSV retains placeholder 0.5 values for unreleased IDs. After private release,
+the unchanged container runs on private images alone. \texttt{scripts/assemble\_final\_submission.py}
+requires those IDs to equal exactly the official sample IDs minus the public-image stems, then replaces
+only untouched private placeholders. It preserves official row order and validates the final hash,
+schema, range, and finiteness.
+
+\section{Reproducibility and integrity}
+Training used one NVIDIA RTX 4070 (12 GB), PyTorch 2.6.0, CUDA 12.4, and seed 42. The full one-shot
+three-model run took 292.8 minutes. Checkpoint SHA-256 values are:
+\begin{itemize}
+\item ConvNeXt selected: \texttt{aebf36acdf23dfe7a1542e9b07ba94e782910b547d6244f3fbb8d84083066510}.
+\item DINOv2 selected: \texttt{f333c566bef9d6c2e9be8ba4a5b5efb5e708492e71162a135856a5e08ee1e8ca}.
 \end{itemize}
+cuDNN benchmarking can select nondeterministic convolution kernels, so bitwise retraining is not
+claimed; submitted weights and inference are fixed. The repository contains no competition images,
+external images, credentials, or runtime download logic.
 
 \section{Team and contributions}
-List team members and brief roles (modeling, data, engineering, writing).
-
-\section*{Acknowledgments}
-Optional funding, compute grants, and organizer thanks.
+Marc Donovici performed data preparation, model development, validation, container engineering, and
+reporting, and is the sole entrant.
 
 \bibliographystyle{plain}
 \bibliography{references}
-
-\appendix
-\section{Hyperparameters}
-\label{app:hparams}
-\begin{table}[h]
-  \centering
-  \small
-  \begin{tabular}{ll}
-    \toprule
-    Hyperparameter & Value \\
-    \midrule
-    Image size & [e.g.\ 384] \\
-    Batch size & \\
-    Learning rate & \\
-    Weight decay & \\
-    Epochs & \\
-    Seed & \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\section{Additional ablations}
-Optional tables/figures for ablation studies.
-
 \end{document}
