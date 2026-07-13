@@ -2,10 +2,9 @@
 FREUID Challenge 2026 — Reproducibility Package
 ---
 
-Team name: marcdonovici
+Team name: Marc Donovici
 Kaggle usernames: marcdonovici
-Final Kaggle submission: [PASTE THE LABEL / DATE-TIME EXACTLY AS KAGGLE SHOWS IT
-                          AFTER submission_final.csv REACHES "COMPLETE"]
+Final Kaggle submission: submission_final.csv - 8:39 PM
 
 Repository (public): https://github.com/Marc-Dvci/FREUID
 Commit SHA: 4db0ae5fd62c739a9398175c78e32add4f418a22
@@ -39,4 +38,4 @@ We confirm this repository at the stated commit reproduces our selected final
 submission and complies with the competition rules.
 
 Signed (team captain): marcdonovici
-Date (UTC): [THE DAY YOU POST THIS]
+Date (UTC): 2026-07-13

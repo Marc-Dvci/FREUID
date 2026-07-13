@@ -177,9 +177,11 @@ Consequently:
    2026-07-13 ~08:05 Europe/Paris. The entrant confirmed directly on Kaggle that the private images
    were not yet released at that time, so the publication is pre-release. The API listing check
    could not corroborate it independently because the token is rejected.
-2. `submission_final.csv` is built, fully validated, and **not submitted**. There is no leaderboard
-   score and no `COMPLETE` status. Nothing here may be reported as a result.
-3. The submission label/date-time fields in the report and reply template remain `PENDING`.
+2. `submission_final.csv` was uploaded through the Kaggle web UI by the entrant on 2026-07-13,
+   labelled `submission_final.csv - 8:39 PM`. This is recorded on the entrant's report, not from an
+   authenticated API check: the CLI could not confirm the `COMPLETE` status or read back any score.
+   No leaderboard score is claimed anywhere in this package.
+3. Report and reply now carry the submission label; no `PENDING` fields remain.
 
 The upload is therefore a manual step for the entrant: upload `submission_final.csv`
 (`239e31c4…a63b38`) through the Kaggle web UI, confirm the submission reaches `COMPLETE`, and copy

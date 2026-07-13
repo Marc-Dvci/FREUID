@@ -40,8 +40,8 @@ Do not mark an unchecked item complete without retaining command output or an ar
 ## Kaggle final submission
 
 - [x] Per-template normalization was tested and rejected: public LB `0.33816 -> 0.54141`.
-- [ ] Frozen ensemble CSV is submitted and its score/status recorded. BLOCKED: Kaggle API returns
-  401 for both tokens; upload `submission_final.csv` via the web UI.
+- [x] Frozen ensemble CSV submitted via the web UI (`submission_final.csv - 8:39 PM`, 2026-07-13).
+  Status/score could not be read back: the Kaggle API returns 401 for both tokens.
 - [x] Private images are inferred as one private-only set through the same unchanged Docker
   entrypoint: 134,997 images, exit 0, 131 minutes measured on RTX 4070.
 - [x] `scripts/assemble_final_submission.py` rejects partial IDs and merges exact rows by id in rehearsal.
@@ -55,7 +55,7 @@ Do not mark an unchecked item complete without retaining command output or an ar
 - [x] Draft technical report contains method, data, licenses, pretrained weights, validation, results,
   inference, Docker reproduction, hardware, runtime, and seed.
 - [x] Report PDF is committed and its URL resolves from the public frozen repository.
-- [ ] Reply contains Kaggle team, usernames, selected submission, repository URL, frozen SHA, report
+- [x] Reply contains Kaggle team, usernames, selected submission, repository URL, frozen SHA, report
   URL, captain signature, and UTC date.
 - [ ] Exactly one reply is posted to the pinned Kaggle thread by 2026-07-15 23:59 AoE.
 - [ ] The reply is not duplicated.
